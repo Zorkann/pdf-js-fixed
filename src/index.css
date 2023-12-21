@@ -1,26 +1,23 @@
-:root {
-  --scale-factor: 1.5;
-}
-
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-p {
-  margin: 0;
+.app {
+  position: relative;
+}
+
+.toolbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  color: white;
+  background-color: black;
 }
 
 .page {
-  user-select: none;
-  width: calc(var(--scale-factor) * 612px);
-  height: calc(var(--scale-factor) * 792px);
-  bottom: 0;
-  left: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
+  position: relative;
 }
 
 .textLayer {
@@ -36,23 +33,20 @@ p {
   forced-color-adjust: none;
   transform-origin: 0 0;
   z-index: 2;
+  user-select: text;
 }
 
-.textLayer p {
+.textLayer p,
+.textLayer span {
   position: absolute;
-
   white-space: pre;
   cursor: text;
   transform-origin: 0% 0%;
   user-select: text;
   color: transparent;
+  padding-right: 20px;
 }
 
-.textLayer > div > span {
-  cursor: inherit;
-  display: block;
-  height: 100vh;
-  position: absolute;
-  width: 100vw;
-  z-index: -1;
+.textLayer .endOfContent {
+  all: unset;
 }

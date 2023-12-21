@@ -8,7 +8,7 @@ const src = new URL("pdfjs-dist/build/pdf.worker.js", import.meta.url);
 pdfjs.GlobalWorkerOptions.workerSrc = src.toString();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  // <React.StrictMode>
+  <React.StrictMode>
     <App />
-  // </React.StrictMode>
+  </React.StrictMode>
 );

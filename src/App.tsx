@@ -1,91 +1,133 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import "./App.css";
 import * as pdfjs from "pdfjs-dist";
 import * as pdfjsViewer from "pdfjs-dist/web/pdf_viewer";
 import pdfFile from "./assets/test2.pdf";
+import { changeNodes } from "./utils";
+import { TextContent } from "pdfjs-dist/types/web/text_layer_builder";
+import Toolbar from "./Toolbar";
 
-function changeNodes(builder: pdfjsViewer.TextLayerBuilder) {
-  builder.div.childNodes.forEach((el) => {
-    // Create a new div element
-    const newDiv = document.createElement("div");
-    // Create a new span element within the div
-    const layerSpan = document.createElement("span");
-    layerSpan.style.transform = "none";
-    layerSpan.style.left = el.style.left;
-    layerSpan.style.top = el.style.top;
+const SCALE = 1.5;
 
-    // newDiv.appendChild(layerSpan);
-    // Create a new p element within the div
-    const newP = document.createElement("p");
+const createContainers = ({ pageNumber }: { pageNumber: number }) => {
+  const container = document.querySelector(".viewer") as HTMLDivElement;
+  container.style.setProperty("--scale-factor", SCALE.toString());
+  const canvas = document.createElement("canvas");
+  const page = document.createElement("div");
+  page.className = "page";
+  page.dataset.pageNumber = pageNumber.toString();
 
-    newP.textContent = el.textContent; // Copy the text content from the original span
+  return { container, canvas, page };
+};
 
-    for (let i = 0; i < el.attributes.length; i++) {
-      const attribute = el.attributes[i];
-      newP.setAttribute(attribute.name, attribute.value);
-    }
+const buildTextLayer = async ({
+  textContent,
+  viewPort,
+}: {
+  textContent: TextContent;
+  viewPort: pdfjs.PageViewport;
+}) => {
+  const builder = new pdfjsViewer.TextLayerBuilder({});
+  builder.setTextContentSource(textContent);
 
-    newDiv.appendChild(newP);
-    // Replace the original span with the new div
-    builder.div.replaceChild(newDiv, el);
+  await builder.render(viewPort);
+
+  return changeNodes(builder);
+};
+
+const getDocumentPage = async ({
+  pdfDocument,
+  pageNumber,
+}: {
+  pdfDocument: pdfjs.PDFDocumentProxy;
+  pageNumber: number;
+}) => {
+  const pdfPage = await pdfDocument.getPage(pageNumber);
+  const viewPort = pdfPage.getViewport({ scale: SCALE });
+  const textContent = await pdfPage.getTextContent();
+
+  return { pdfPage, viewPort, textContent };
+};
+
+const getPdfDocument = async () => {
+  const loadingTask = await pdfjs.getDocument({
+    url: pdfFile,
+    cMapUrl: "../node_modules/pdfjs-dist/cmaps/",
+    cMapPacked: true,
+    enableXfa: true,
   });
+  const pdfDocument = await loadingTask.promise;
+
+  return { pdfDocument };
+};
+
+const renderPdfToCanvas = async ({
+  pdfPage,
+  canvas,
+  viewPort,
+}: {
+  pdfPage: pdfjs.PDFPageProxy;
+  canvas: HTMLCanvasElement;
+  viewPort: pdfjs.PageViewport;
+}) => {
+  pdfPage.render({
+    canvasContext: canvas.getContext("2d") as CanvasRenderingContext2D,
+    viewport: viewPort,
+  });
+
+  canvas.width = viewPort.width;
+  canvas.height = viewPort.height;
+};
+
+async function render({
+  pdfDocument,
+  pageNumber = 1,
+}: {
+  pdfDocument: pdfjs.PDFDocumentProxy;
+  pageNumber?: number;
+}) {
+  const { container, page, canvas } = createContainers({ pageNumber });
+  const { pdfPage, viewPort, textContent } = await getDocumentPage({
+    pdfDocument,
+    pageNumber,
+  });
+  renderPdfToCanvas({ pdfPage, canvas, viewPort });
+
+  const layer = await buildTextLayer({ textContent, viewPort });
+
+  page.appendChild(canvas);
+  page.appendChild(layer);
+  container.appendChild(page);
 }
 
 function App() {
-  const layerRef = useRef<HTMLDivElement>();
-  const canvasRef = useRef<HTMLCanvasElement>();
-
-  async function manualPdfToCanvas() {
-    const layer = layerRef.current;
-    const canvas = canvasRef.current;
-
-    const loadingTask = await pdfjs.getDocument({
-      url: pdfFile,
-      cMapUrl: "../node_modules/pdfjs-dist/cmaps/",
-      cMapPacked: true,
-      enableXfa: true,
-    });
-
-    const pdfDocument = await loadingTask.promise;
-
-    const pdfPage = await pdfDocument.getPage(1);
-
-    const viewPort = pdfPage.getViewport({ scale: 1.5 });
-
-    canvas.width = viewPort.width;
-    canvas.height = viewPort.height;
-
-    pdfPage.render({
-      canvasContext: canvas?.getContext("2d"),
-      viewport: viewPort,
-    });
-
-    //////
-
-    const textContent = await pdfPage.getTextContent();
-
-    const builder = new pdfjsViewer.TextLayerBuilder({});
-
-    builder.setTextContentSource(textContent);
-
-    await builder.render(viewPort);
-
-    changeNodes(builder);
-
-    document.querySelector(".page")?.appendChild(builder.div);
-  }
+  const [length, setLength] = useState(1);
+  const didInit = useRef(false);
 
   useEffect(() => {
-    manualPdfToCanvas();
+    if (didInit.current) return;
+
+    didInit.current = true;
+
+    async function handlePDF() {
+      const { pdfDocument } = await getPdfDocument();
+
+      setLength(pdfDocument.numPages);
+
+      for (let i = 0; i < pdfDocument.numPages; i++) {
+        await render({ pdfDocument, pageNumber: i + 1 });
+      }
+    }
+
+    handlePDF();
   }, []);
 
   return (
-    <>
-      <div className="page">
-        <canvas ref={canvasRef} />
-      </div>
-    </>
+    <div className="app">
+      {length ? <Toolbar length={length} /> : null}
+      <div className="viewer" />
+    </div>
   );
 }
 
