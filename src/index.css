@@ -1,0 +1,58 @@
+:root {
+  --scale-factor: 1.5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+p {
+  margin: 0;
+}
+
+.page {
+  user-select: none;
+  width: calc(var(--scale-factor) * 612px);
+  height: calc(var(--scale-factor) * 792px);
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.5;
+  line-height: 1;
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  z-index: 2;
+}
+
+.textLayer p {
+  position: absolute;
+
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+  color: transparent;
+}
+
+.textLayer > div > span {
+  cursor: inherit;
+  display: block;
+  height: 100vh;
+  position: absolute;
+  width: 100vw;
+  z-index: -1;
+}
